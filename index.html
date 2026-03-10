@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon Jardin des Fiertés</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600&family=Nunito:wght@700&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f5f0e8;
+  --paper-dark: #ede5d0;
+  --ink: #2a1f0e;
+  --ink-soft: #4a3828;
+  --moss: #5a7a3a;
+  --soil: #8b6545;
+  --water: #7ab8d4;
+  --sky1: #c8dff0;
+  --sky2: #e0eef8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper);
+  min-height: 100vh;
+  font-family: 'Nunito', sans-serif;
+  overflow-x: hidden;
+}
+
+/* PAPER GRAIN */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 999;
+  pointer-events: none; opacity: 0.42;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* WATERCOLOR BACKGROUND — sky + earth */
+.bg {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    /* green ground glow */
+    radial-gradient(ellipse 70% 40% at 20% 95%, rgba(90,122,58,0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 55% at 80% 92%, rgba(90,122,58,0.11) 0%, transparent 58%),
+    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(139,101,69,0.16) 0%, transparent 50%),
+    /* sky watercolor wash */
+    radial-gradient(ellipse 80% 60% at 70% 15%, rgba(180,220,245,0.55) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 25% 8%, rgba(200,230,248,0.45) 0%, transparent 65%),
+    /* base gradient paper → sky */
+    linear-gradient(180deg,
+      #ddeef8 0%,
+      #e8f4fb 12%,
+      #f0f0e8 38%,
+      #f5eedc 65%,
+      #e8dbc8 100%
+    );
+}
+
+/* GROUND SVG */
+.ground-svg {
+  position: fixed; bottom: 0; left: 0; width: 100%;
+  z-index: 2; pointer-events: none;
+}
+
+/* GARDEN */
+#garden {
+  position: fixed;
+  bottom: 10vh; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 0 20px 0 370px;
+  gap: 28px 16px;
+}
+
+.flower-spot {
+  display: flex; flex-direction: column; align-items: center;
+  cursor: pointer;
+  transition: transform 0.3s ease, filter 0.2s ease;
+  position: relative;
+  padding: 8px 10px 4px;
+  border-radius: 16px;
+}
+.flower-spot:hover { transform: translateY(-5px) rotate(-1.5deg); }
+.flower-spot:active { transform: translateY(-2px) scale(0.93); transition: transform 0.08s ease; }
+
+/* SELECTED STATE */
+.flower-spot.sel {
+  transform: translateY(-6px);
+}
+.flower-spot.sel:hover { transform: translateY(-10px) rotate(-1.5deg); }
+.flower-spot.sel .flower-label {
+  opacity: 1;
+  color: var(--moss);
+  font-weight: 700;
+}
+.flower-spot.sel .stage-badge {
+  opacity: 1;
+  color: var(--moss);
+  font-weight: 600;
+}
+/* small selection dot underneath */
+.flower-spot.sel::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 50%;
+  transform: translateX(-50%);
+  width: 5px; height: 5px;
+  background: var(--moss);
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.flower-label {
+  font-family: 'Nunito', sans-serif; font-weight: 600;
+  font-size: 13px; color: var(--ink-soft);
+  margin-bottom: 1px; opacity: 0.78;
+}
+
+/* growth stage badge */
+.stage-badge {
+  font-family: 'Nunito', sans-serif; font-weight: 500;
+  font-size: 10px; color: rgba(90,122,58,0.7);
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+/* WATER DROPS */
+.drop {
+  position: fixed; pointer-events: none; z-index: 50;
+  width: 5px; height: 8px;
+  background: radial-gradient(circle at 35% 25%, rgba(255,255,255,0.85), rgba(100,170,210,0.65));
+  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+  animation: fall 0.72s ease-in forwards;
+}
+@keyframes fall {
+  0%{opacity:1;transform:translateY(0);}
+  100%{opacity:0;transform:translateY(52px) scaleY(0.35);}
+}
+
+/* PANEL */
+#panel {
+  position: fixed; top: 0; left: 0; bottom: 0; width: 345px;
+  z-index: 20;
+  background: var(--paper-dark);
+  border-right: 1px solid rgba(139,101,69,0.18);
+  padding: 30px 26px 26px;
+  overflow-y: auto;
+  box-shadow: 3px 0 20px rgba(42,31,14,0.07);
+}
+#panel::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(139,101,69,0.065) 29px);
+}
+
+#panel h1 {
+  font-family: 'Pacifico', cursive;
+  font-size: 32px; color: var(--ink); font-weight: 700;
+  line-height: 1; margin-bottom: 3px;
+}
+.sub { font-size: 13px; color: var(--soil); opacity: 0.75; margin-bottom: 22px; }
+
+.wk {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 600;
+  color: rgba(139,101,69,0.65);
+  border: 1px dashed rgba(139,101,69,0.28);
+  border-radius: 20px; padding: 2px 12px;
+  margin-bottom: 20px;
+}
+
+.lbl { font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 700; color: var(--moss); margin-bottom: 8px; }
+
+textarea {
+  width: 100%; height: 88px;
+  background: rgba(255,255,255,0.48);
+  border: 1px solid rgba(139,101,69,0.22); border-radius: 3px;
+  padding: 9px 11px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px; color: var(--ink); line-height: 1.65;
+  resize: none; outline: none;
+  box-shadow: inset 0 1px 4px rgba(42,31,14,0.04);
+  transition: border-color 0.2s;
+}
+textarea:focus { border-color: rgba(90,122,58,0.38); }
+textarea::placeholder { color: rgba(74,56,40,0.38); }
+
+.btn {
+  width: 100%; padding: 10px 14px;
+  border: none; border-radius: 3px;
+  font-family: 'Nunito', sans-serif; font-size: 17px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.bw {
+  background: linear-gradient(135deg, #80bcd8, #5a9ab8);
+  color: white; margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(90,154,184,0.28), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.bg2 {
+  background: linear-gradient(135deg, #7a9a52, #527838);
+  color: var(--paper);
+  box-shadow: 0 2px 8px rgba(82,120,56,0.25), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+/* LOCKED state */
+.btn-locked {
+  background: linear-gradient(135deg, #c8b898, #b0a080) !important;
+  color: rgba(42,31,14,0.5) !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+.btn-locked:hover { transform: none !important; filter: none !important; }
+
+.btn:not(.btn-locked):hover { transform: translateY(-1px); filter: brightness(1.05); }
+.btn:active { transform: translateY(0); }
+
+/* LOCK INFO BOX */
+#lock-info {
+  background: rgba(200,184,152,0.2);
+  border: 1px dashed rgba(139,101,69,0.25);
+  border-radius: 3px; padding: 9px 12px;
+  margin-top: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; color: rgba(74,56,40,0.65);
+  line-height: 1.45; display: none;
+}
+#lock-info.show { display: block; }
+
+/* SELECTED CARD */
+#sel-card {
+  background: rgba(255,255,255,0.32);
+  border: 1px solid rgba(139,101,69,0.16);
+  border-radius: 3px; padding: 11px 13px;
+  margin-bottom: 14px;
+}
+.sc-name { font-family: 'Nunito', sans-serif; font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.sc-stage {
+  font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 600;
+  color: var(--moss); margin-bottom: 5px; opacity: 0.85;
+}
+.htrack { height: 5px; background: rgba(42,31,14,0.1); border-radius: 3px; overflow: hidden; margin: 3px 0 5px; }
+.hfill { height: 100%; border-radius: 3px; transition: width 0.6s ease, background 0.5s; }
+.sc-st { font-size: 12px; color: var(--soil); }
+.sc-last {
+  font-size: 12px; color: rgba(42,31,14,0.42);
+  margin-top: 6px; line-height: 1.45; font-family: 'Nunito', sans-serif;
+}
+/* watering progress dots */
+.water-dots {
+  display: flex; gap: 4px; margin: 6px 0 2px; align-items: center;
+}
+.wdot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(122,184,212,0.25);
+  border: 1px solid rgba(122,184,212,0.4);
+  transition: all 0.3s;
+}
+.wdot.filled {
+  background: rgba(90,154,184,0.75);
+  border-color: rgba(90,154,184,0.8);
+}
+.wdot.today-dot {
+  background: rgba(90,122,58,0.75);
+  border-color: rgba(90,122,58,0.9);
+  box-shadow: 0 0 4px rgba(90,122,58,0.35);
+}
+
+/* DIVIDER */
+.div {
+  height: 1px; margin: 16px 0;
+  background: linear-gradient(to right, transparent, rgba(42,31,14,0.13) 30%, rgba(42,31,14,0.13) 70%, transparent);
+  position: relative;
+}
+.div::after {
+  content: '✦'; position: absolute; top: -7px; left: 50%;
+  transform: translateX(-50%); font-size: 10px;
+  color: rgba(42,31,14,0.18); background: var(--paper-dark); padding: 0 4px;
+}
+
+/* ADD SECTION */
+#add-sec { display: none; margin-top: 10px; }
+#add-sec.open { display: block; }
+
+.ni {
+  width: 100%; padding: 7px 11px;
+  background: rgba(255,255,255,0.48);
+  border: 1px solid rgba(139,101,69,0.22); border-radius: 3px;
+  font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 600; color: var(--ink);
+  outline: none; margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+.ni:focus { border-color: rgba(90,122,58,0.38); }
+
+.cpick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.csw {
+  width: 27px; height: 27px; border-radius: 50%;
+  cursor: pointer; border: 2.5px solid transparent; transition: all 0.15s;
+}
+.csw:hover { transform: scale(1.18); }
+.csw.on { border-color: var(--ink); box-shadow: 0 0 0 2px rgba(42,31,14,0.12); }
+
+/* TOAST */
+#toast {
+  position: fixed; bottom: 26px; left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--ink); color: var(--paper);
+  padding: 9px 22px; border-radius: 3px;
+  font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 600;
+  z-index: 300; pointer-events: none;
+  box-shadow: 0 4px 18px rgba(42,31,14,0.2);
+  transition: transform 0.42s cubic-bezier(0.34,1.5,0.64,1);
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+#wkmsg {
+  position: fixed; top: 22px; right: 22px;
+  background: var(--paper); border: 1px solid rgba(90,122,58,0.28);
+  border-radius: 3px; padding: 13px 16px;
+  font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 600; color: var(--moss);
+  box-shadow: 0 4px 18px rgba(42,31,14,0.08);
+  z-index: 200; display: none; max-width: 210px; line-height: 1.4;
+}
+
+#panel::-webkit-scrollbar { width: 3px; }
+#panel::-webkit-scrollbar-thumb { background: rgba(139,101,69,0.25); border-radius: 2px; }
+
+/* ONBOARDING */
+#onboarding {
+  position: fixed; inset: 0; z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #ddeef8 0%, #eef6e0 55%, #e8dbc8 100%);
+  transition: opacity 0.7s ease;
+}
+#onboarding.fade-out { opacity: 0; pointer-events: none; }
+.ob-wrap { display: flex; flex-direction: column; align-items: center; max-width: 420px; width: 90%; text-align: center; }
+.ob-title { font-family: 'Pacifico', cursive; font-size: 36px; color: var(--ink); line-height: 1.2; margin-bottom: 10px; }
+.ob-sub { font-family: 'Nunito', sans-serif; font-size: 15px; color: var(--soil); opacity: 0.8; margin-bottom: 32px; line-height: 1.65; }
+.ob-illustration { width: 110px; height: 120px; margin-bottom: 26px; }
+.ob-form { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+.ob-input { width: 100%; padding: 13px 18px; background: rgba(255,255,255,0.6); border: 1.5px solid rgba(139,101,69,0.22); border-radius: 40px; font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 500; color: var(--ink); outline: none; text-align: center; backdrop-filter: blur(6px); transition: border-color 0.2s, box-shadow 0.2s; }
+.ob-input:focus { border-color: rgba(90,122,58,0.45); box-shadow: 0 0 0 3px rgba(90,122,58,0.08); }
+.ob-input::placeholder { color: rgba(74,56,40,0.35); }
+.ob-palette { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+.ob-swatch { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: all 0.15s; }
+.ob-swatch:hover { transform: scale(1.18); }
+.ob-swatch.on { border-color: var(--ink); box-shadow: 0 0 0 2px rgba(42,31,14,0.12); transform: scale(1.1); }
+.ob-btn { padding: 14px 32px; width: 100%; background: linear-gradient(135deg, #7a9a52, #527838); color: var(--paper); border: none; border-radius: 40px; font-family: 'Nunito', sans-serif; font-size: 17px; font-weight: 700; cursor: pointer; letter-spacing: 0.02em; box-shadow: 0 4px 18px rgba(82,120,56,0.3), inset 0 1px 0 rgba(255,255,255,0.15); transition: all 0.2s; }
+.ob-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(82,120,56,0.35); }
+.ob-btn:active { transform: translateY(0); }
+.ob-hint { font-family: 'Nunito', sans-serif; font-size: 12px; color: rgba(74,56,40,0.4); margin-top: 4px; }
+.ob-title        { animation: obUp 0.7s cubic-bezier(0.34,1.4,0.64,1) 0.15s both; }
+.ob-sub          { animation: obUp 0.7s cubic-bezier(0.34,1.4,0.64,1) 0.28s both; }
+.ob-illustration { animation: obUp 0.8s cubic-bezier(0.34,1.5,0.64,1) 0.0s  both; }
+.ob-form         { animation: obUp 0.7s cubic-bezier(0.34,1.4,0.64,1) 0.40s both; }
+@keyframes obUp { from{opacity:0;transform:translateY(22px);} to{opacity:1;transform:translateY(0);} }
+
+</style>
+</head>
+<body>
+
+<div class="bg"></div>
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+  <div class="ob-wrap">
+    <svg class="ob-illustration" viewBox="0 0 110 120" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="obwc">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="9"/>
+          <feDisplacementMap in="SourceGraphic" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </defs>
+      <!-- soil patch -->
+      <ellipse cx="55" cy="100" rx="42" ry="12" fill="#9b7555" opacity="0.35" filter="url(#obwc)"/>
+      <!-- seed -->
+      <ellipse cx="55" cy="90" rx="9" ry="7" fill="#8b6545" opacity="0.75" filter="url(#obwc)"/>
+      <!-- tiny sprout stem -->
+      <path d="M55 88 Q57 72 55 58" stroke="#5a7a3a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <!-- two tiny leaves -->
+      <ellipse cx="47" cy="70" rx="9" ry="5" fill="#7a9a52" opacity="0.7" transform="rotate(-30 47 70)" filter="url(#obwc)"/>
+      <ellipse cx="63" cy="64" rx="9" ry="5" fill="#8ab05a" opacity="0.65" transform="rotate(25 63 64)" filter="url(#obwc)"/>
+      <!-- small bud on top -->
+      <ellipse cx="55" cy="52" rx="6" ry="8" fill="#c85a70" opacity="0.55" filter="url(#obwc)"/>
+      <ellipse cx="55" cy="48" rx="4" ry="4" fill="#e0809a" opacity="0.4"/>
+    </svg>
+
+    <div class="ob-title">Bienvenue dans<br>ton jardin ✦</div>
+    <div class="ob-sub">Chaque fleur représente quelque chose<br>dont tu prends soin. Plante la première<br>et arrose-la chaque jour avec une fierté.</div>
+
+    <div class="ob-form">
+      <input class="ob-input" id="ob-name" placeholder="Nom de ta première fleur…" maxlength="22">
+      <div class="ob-palette" id="ob-palette"></div>
+      <button class="ob-btn" onclick="obPlant()">Planter ma première fleur 🌱</button>
+      <div class="ob-hint">Tu pourras en ajouter une nouvelle chaque semaine</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- WATERCOLOR GROUND + SKY HINTS -->
+<svg class="ground-svg" viewBox="0 0 1440 220" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="wc1">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.035" numOctaves="5" seed="12" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="14" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="blur1"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="blur2"><feGaussianBlur stdDeviation="9"/></filter>
+    <linearGradient id="gsoil" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9b7555" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#6b4830" stop-opacity="0.82"/>
+    </linearGradient>
+    <linearGradient id="ggrass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8ab05a" stop-opacity="0.88"/>
+      <stop offset="65%" stop-color="#5a7a3a" stop-opacity="0.96"/>
+      <stop offset="100%" stop-color="#3a5a22" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="ghigh" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b8d880" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#8ab05a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- soil -->
+  <path d="M0 162 Q360 148 720 160 Q1080 172 1440 152 L1440 220 L0 220Z"
+    fill="url(#gsoil)" filter="url(#wc1)" opacity="0.58"/>
+  <!-- grass shadow -->
+  <ellipse cx="720" cy="126" rx="800" ry="28" fill="#3a5a22" opacity="0.1" filter="url(#blur2)"/>
+  <!-- main grass -->
+  <path d="M0 125 Q80 105 160 118 Q245 132 335 106 Q420 80 510 102 Q600 124 690 96 Q780 68 870 94 Q960 120 1055 88 Q1145 56 1240 84 Q1325 110 1440 74 L1440 220 L0 220Z"
+    fill="url(#ggrass)" filter="url(#wc1)"/>
+  <!-- grass highlight -->
+  <path d="M0 108 Q100 87 200 103 Q310 118 410 90 Q510 62 610 86 Q710 108 810 78 Q910 48 1010 72 Q1110 98 1210 66 Q1320 36 1440 58 L1440 138 L0 138Z"
+    fill="url(#ghigh)" opacity="0.68"/>
+  <!-- depth accents -->
+  <ellipse cx="280" cy="120" rx="140" ry="11" fill="#3a5a22" opacity="0.09" filter="url(#blur1)"/>
+  <ellipse cx="820" cy="96" rx="190" ry="9" fill="#3a5a22" opacity="0.07" filter="url(#blur1)"/>
+  <ellipse cx="1300" cy="80" rx="110" ry="8" fill="#3a5a22" opacity="0.08" filter="url(#blur1)"/>
+</svg>
+
+<!-- GARDEN -->
+<div id="garden"></div>
+
+<!-- PANEL -->
+<div id="panel">
+  <h1>Mon Jardin</h1>
+  <div class="sub">des petites fiertés du quotidien</div>
+  <div class="wk" id="wk-badge">⌘ semaine —</div>
+
+  <!-- Selected flower card -->
+  <div id="sel-card" style="display:none;">
+    <div class="sc-name" id="sc-name"></div>
+    <div class="sc-stage" id="sc-stage"></div>
+    <div class="water-dots" id="water-dots"></div>
+    <div style="font-size:11px;color:var(--soil);opacity:0.65;margin-top:2px;">vitalité</div>
+    <div class="htrack"><div class="hfill" id="sc-bar"></div></div>
+    <div class="sc-st" id="sc-st"></div>
+    <div class="sc-last" id="sc-last"></div>
+  </div>
+
+  <div class="lbl">💧 Arroser</div>
+  <textarea id="pride" placeholder="ce dont je suis fier·e aujourd'hui…"></textarea>
+  <button class="btn bw" id="btn-water" onclick="water()">Arroser la fleur choisie</button>
+
+  <div class="div"></div>
+
+  <div class="lbl">🌱 Planter</div>
+  <button class="btn bg2" id="btn-plant-toggle" onclick="toggleAdd()">Nouvelle fleur cette semaine</button>
+  <div id="lock-info"></div>
+
+  <div id="add-sec">
+    <div style="height:10px;"></div>
+    <input class="ni" id="fname" placeholder="Nom de la fleur…" maxlength="22">
+    <div class="cpick" id="cpick"></div>
+    <button class="btn bg2" onclick="plant()">Planter ↓</button>
+  </div>
+</div>
+
+<div id="wkmsg">🌿 Nouvelle semaine —<br>tu peux planter une fleur !</div>
+<div id="toast">…</div>
+
+<script>
+// ─── PALETTES ──────────────────────────────────────────────
+const PAL = [
+  ['#c85a70','#e0809a','#f9d870'],
+  ['#d07038','#e89858','#fde898'],
+  ['#7870c8','#9890d8','#f8e870'],
+  ['#c85060','#e07888','#ffe888'],
+  ['#d0a828','#e0c848','#fff4a8'],
+  ['#3888c0','#58a8d8','#f8f0a0'],
+  ['#48b890','#68d0a8','#fff0b0'],
+  ['#c07048','#d89068','#fde0a0'],
+  ['#9858b8','#b878d0','#fdf0a0'],
+  ['#508850','#70a870','#fff8a0'],
+  ['#c08830','#d8a850','#fdf0c0'],
+  ['#b05870','#c87890','#fde8b0'],
+];
+
+// ─── GROWTH STAGES ─────────────────────────────────────────
+// Each stage needs N total waterings to unlock next
+// stages: seed(0) → sprout(1) → bud(2) → bloom(3) → fullbloom(4)
+const STAGE_THRESHOLDS = [0, 1, 3, 6, 10]; // waterings needed to reach each stage
+const STAGE_LABELS = ['Graine 🌰', 'Pousse 🌿', 'Bouton 🫧', 'Fleur 🌸', 'Épanouie ✿'];
+
+function getGrowthStage(f) {
+  const n = f.entries ? f.entries.length : 0;
+  let stage = 0;
+  for (let i = STAGE_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (n >= STAGE_THRESHOLDS[i]) { stage = i; break; }
+  }
+  return stage;
+}
+
+function wateredToday(f) {
+  if (!f.entries || f.entries.length === 0) return false;
+  const last = f.entries[f.entries.length - 1];
+  return last.date === new Date().toLocaleDateString('fr-FR');
+}
+
+// ─── FLOWER SVG ────────────────────────────────────────────
+function flowerSVG(pal, health, growthStage) {
+  const [p1, p2, ctr] = pal;
+  const h = health;
+
+  // Visual health state (separate from growth)
+  const healthState = h > 65 ? 'fresh' : h > 35 ? 'tired' : h > 5 ? 'wilted' : (h === 0 && growthStage > 0) ? 'dead' : 'ok';
+  const dead = healthState === 'dead';
+  const wilted = healthState === 'wilted';
+  const tired = healthState === 'tired';
+
+  const droop = dead ? 38 : wilted ? 20 : tired ? 6 : 0;
+  const stemCol = (dead || wilted) ? '#8a7838' : '#5a7a3a';
+  const p1c = dead ? '#b0a080' : wilted ? '#c0a860' : p1;
+  const p2c = dead ? '#c8b898' : wilted ? '#d0bc78' : p2;
+  const ctrc = (dead || wilted) ? '#c8a040' : ctr;
+  const op = dead ? 0.4 : 1;
+
+  const bx = 40, by = 28;
+  const fid = 'f' + pal[0].replace('#','') + growthStage;
+
+  // Scale petals by growth stage (only shows petals at stage >= 2)
+  const petalScale = growthStage === 4 ? 1 : growthStage === 3 ? 0.78 : growthStage === 2 ? 0.48 : 0;
+  const petalScale2 = dead ? petalScale * 0.38 : wilted ? petalScale * 0.62 : petalScale;
+
+  const angles = [0,40,80,120,160,200,240,320];
+  const petals = petalScale2 > 0 ? angles.map((a,i) =>
+    `<g transform="translate(${bx},${by}) rotate(${a}) scale(${petalScale2})">
+      <path d="M0,0 C-6,-5 -8,-18 0,-22 C8,-18 6,-5 0,0Z"
+        fill="${i%2===0?p1c:p2c}" opacity="${0.78+(i%3)*0.07}" stroke="${p1c}" stroke-width="0.3"/>
+    </g>`
+  ).join('') : '';
+
+  const center = petalScale2 > 0 ? `
+    <circle cx="${bx}" cy="${by}" r="${5.5*petalScale2}" fill="${ctrc}" opacity="0.88"/>
+    <circle cx="${bx-1.5}" cy="${by-1.5}" r="${2.2*petalScale2}" fill="rgba(255,255,255,0.38)"/>
+  ` : '';
+
+  // Leaf — visible from stage 1+
+  const leafOp = growthStage >= 1 ? 0.55 : 0;
+  const leaf = `
+    <path d="M${40+droop*0.4} ${56+droop*0.3} Q${24+droop*0.2} 47 20 40"
+      stroke="${stemCol}" stroke-width="1.1" fill="none" opacity="${leafOp}"/>
+    <ellipse cx="${28+droop*0.2}" cy="47" rx="8" ry="5"
+      fill="${stemCol}" opacity="${leafOp * 0.65}"
+      transform="rotate(-38 ${28+droop*0.2} 47)"/>
+  `;
+
+  // Stem height by stage
+  const stemTop = growthStage === 0 ? 78 : growthStage === 1 ? 64 : growthStage === 2 ? 48 : growthStage === 3 ? 36 : by + 4;
+
+  // Seed visual
+  const seedEl = growthStage === 0 ? `
+    <circle cx="40" cy="80" r="5" fill="#8b6545" opacity="0.68"/>
+    <path d="M40 74 Q42 66 40 58" stroke="${stemCol}" stroke-width="1.4" fill="none" opacity="0.6"/>
+  ` : '';
+
+  // Bud (stage 2)
+  const budEl = growthStage === 2 ? `
+    <ellipse cx="${bx}" cy="${by+4}" rx="6" ry="8"
+      fill="${p1c}" opacity="0.75"/>
+    <ellipse cx="${bx}" cy="${by}" rx="4" ry="4"
+      fill="${p2c}" opacity="0.5"/>
+  ` : '';
+
+  return `<svg width="80" height="95" viewBox="0 0 80 95" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;opacity:${op}">
+    <defs>
+      <filter id="${fid}">
+        <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="7"/>
+        <feDisplacementMap in="SourceGraphic" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+    ${growthStage >= 1 ? leaf : ''}
+    ${growthStage >= 1 ? `<path d="M40 92 Q${40+droop*0.6} ${(92+stemTop)/2} ${40+droop} ${stemTop}"
+      stroke="${stemCol}" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.82"/>` : ''}
+    <g filter="url(#${fid})">
+      ${seedEl}
+      ${budEl}
+      ${petals}
+      ${center}
+    </g>
+  </svg>`;
+}
+
+// ─── STATE ─────────────────────────────────────────────────
+let S = { flowers: [], selectedId: null, weekNum: 0, lastPlantedAt: null };
+const save = () => localStorage.setItem('jv6', JSON.stringify(S));
+
+function load() {
+  try { const r = localStorage.getItem('jv6'); if (r) S = JSON.parse(r); } catch(e) {}
+  const wn = Math.floor(Date.now() / (7*24*3600*1000));
+  if (wn !== S.weekNum) {
+    if (S.flowers.length > 0) setTimeout(showWkMsg, 1200);
+    S.weekNum = wn; save();
+  }
+}
+
+let NOW = Date.now();
+
+function getHealth(f) {
+  if (!f.entries || f.entries.length === 0) return 0;
+  // health based on lastWatered timestamp
+  if (!f.lastWatered) return 0;
+  return Math.max(0, Math.round(100 - (NOW - f.lastWatered) / 3600000 / 72 * 100));
+}
+
+// Days until next planting allowed (7 days after lastPlantedAt)
+function daysUntilNextPlant() {
+  if (!S.lastPlantedAt) return 0;
+  const msLeft = (S.lastPlantedAt + 7 * 24 * 3600 * 1000) - NOW;
+  if (msLeft <= 0) return 0;
+  return Math.ceil(msLeft / (24 * 3600 * 1000));
+}
+
+function canPlant() {
+  return daysUntilNextPlant() === 0;
+}
+
+// ─── RENDER ────────────────────────────────────────────────
+function render() {
+  NOW = Date.now();
+  const g = document.getElementById('garden');
+  g.innerHTML = '';
+
+  S.flowers.forEach(f => {
+    const pal = PAL[f.palIdx % PAL.length];
+    const h = getHealth(f);
+    const gs = getGrowthStage(f);
+
+    const spot = document.createElement('div');
+    spot.className = 'flower-spot' + (S.selectedId === f.id ? ' sel' : '');
+    spot.dataset.id = f.id;
+    spot.onclick = () => { S.selectedId = f.id; render(); };
+
+    const badge = document.createElement('div');
+    badge.className = 'stage-badge';
+    badge.textContent = STAGE_LABELS[gs];
+
+    const lbl = document.createElement('div');
+    lbl.className = 'flower-label';
+    lbl.textContent = f.name;
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = flowerSVG(pal, h, gs);
+
+    spot.appendChild(badge);
+    spot.appendChild(lbl);
+    spot.appendChild(wrap);
+    g.appendChild(spot);
+  });
+
+  updateSel();
+  updatePlantButton();
+  document.getElementById('wk-badge').textContent = `⌘ semaine ${(S.weekNum % 52) + 1}`;
+}
+
+function updateSel() {
+  const card = document.getElementById('sel-card');
+  if (!S.selectedId) { card.style.display = 'none'; return; }
+  const f = S.flowers.find(x => x.id === S.selectedId);
+  if (!f) { card.style.display = 'none'; return; }
+
+  card.style.display = 'block';
+  document.getElementById('sc-name').textContent = f.name;
+
+  const gs = getGrowthStage(f);
+  const totalWaterings = f.entries ? f.entries.length : 0;
+  const nextThreshold = STAGE_THRESHOLDS[gs + 1];
+  const stageEl = document.getElementById('sc-stage');
+  stageEl.textContent = nextThreshold !== undefined
+    ? `${STAGE_LABELS[gs]} — encore ${nextThreshold - totalWaterings} arrosage${nextThreshold - totalWaterings > 1 ? 's' : ''} pour ${STAGE_LABELS[gs + 1]}`
+    : `${STAGE_LABELS[gs]} — stade maximal atteint ✦`;
+
+  // Watering dots — show last 10 waterings
+  const dotsEl = document.getElementById('water-dots');
+  dotsEl.innerHTML = '';
+  const maxDots = nextThreshold !== undefined ? nextThreshold : STAGE_THRESHOLDS[STAGE_THRESHOLDS.length - 1];
+  const startFrom = STAGE_THRESHOLDS[gs];
+  for (let i = startFrom; i < (nextThreshold || maxDots); i++) {
+    const dot = document.createElement('div');
+    const isToday = i === totalWaterings - 1 && wateredToday(f);
+    dot.className = 'wdot' + (i < totalWaterings ? (isToday ? ' today-dot' : ' filled') : '');
+    dotsEl.appendChild(dot);
+  }
+
+  const h = getHealth(f);
+  const bar = document.getElementById('sc-bar');
+  bar.style.width = h + '%';
+  bar.style.background = h > 65 ? '#7a9a52' : h > 35 ? '#c8a04a' : '#c05040';
+
+  const stMsgs = {
+    fresh: 'Bien hydratée ✿', tired: 'Un peu fatiguée…',
+    wilted: 'Elle fane, vite !', dead: 'Fanée 💔', ok: 'Pousse en cours 🌿'
+  };
+  const healthS = h > 65 ? 'fresh' : h > 35 ? 'tired' : h > 5 ? 'wilted' : (h === 0 && gs > 0) ? 'dead' : 'ok';
+  document.getElementById('sc-st').textContent = stMsgs[healthS] || '';
+
+  const last = document.getElementById('sc-last');
+  if (f.entries?.length) {
+    const e = f.entries[f.entries.length - 1];
+    last.textContent = `« ${e.text} »`;
+  } else {
+    last.textContent = 'aucune fierté encore — arrose-la !';
+  }
+}
+
+function updatePlantButton() {
+  const btn = document.getElementById('btn-plant-toggle');
+  const lockInfo = document.getElementById('lock-info');
+  const days = daysUntilNextPlant();
+
+  if (days > 0) {
+    btn.classList.add('btn-locked');
+    btn.onclick = () => {
+      lockInfo.classList.add('show');
+      lockInfo.textContent = `🔒 Tu pourras planter une nouvelle fleur dans ${days} jour${days > 1 ? 's' : ''}. Prends soin de celles qui sont déjà là…`;
+    };
+    lockInfo.textContent = `🔒 Prochaine fleur dans ${days} jour${days > 1 ? 's' : ''}`;
+    lockInfo.classList.add('show');
+    document.getElementById('add-sec').classList.remove('open');
+  } else {
+    btn.classList.remove('btn-locked');
+    btn.onclick = toggleAdd;
+    lockInfo.classList.remove('show');
+  }
+}
+
+// ─── ACTIONS ───────────────────────────────────────────────
+function water() {
+  if (!S.selectedId) { toast('Choisis une fleur d\'abord ✦'); return; }
+  const f = S.flowers.find(x => x.id === S.selectedId);
+  if (!f) return;
+  if (wateredToday(f)) { toast('Déjà arrosée aujourd\'hui 💧'); return; }
+  const txt = document.getElementById('pride').value.trim();
+  if (!txt) { toast('Écris quelque chose dont tu es fier·e ✦'); return; }
+
+  f.lastWatered = Date.now();
+  if (!f.entries) f.entries = [];
+  f.entries.push({ date: new Date().toLocaleDateString('fr-FR'), text: txt });
+  document.getElementById('pride').value = '';
+
+  // drops animation
+  const spot = document.querySelector(`[data-id="${f.id}"]`);
+  if (spot) {
+    const r = spot.getBoundingClientRect();
+    for (let i = 0; i < 7; i++) setTimeout(() => {
+      const d = document.createElement('div'); d.className = 'drop';
+      d.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 22) + 'px';
+      d.style.top = (r.top - 4) + 'px';
+      document.body.appendChild(d); setTimeout(() => d.remove(), 780);
+    }, i * 65);
+  }
+
+  const gs = getGrowthStage(f);
+  const newGs = getGrowthStage({ ...f, entries: f.entries });
+  const didGrow = newGs > gs;
+
+  save(); render();
+  toast(didGrow ? `🌱 Elle grandit — ${STAGE_LABELS[newGs]} !` : 'Arrosée avec soin 💧');
+}
+
+let selPal = 0;
+function buildPicker() {
+  const c = document.getElementById('cpick'); c.innerHTML = '';
+  PAL.forEach((p, i) => {
+    const s = document.createElement('div');
+    s.className = 'csw' + (i === selPal ? ' on' : '');
+    s.style.background = `radial-gradient(circle at 38% 35%, ${p[1]}, ${p[0]})`;
+    s.onclick = () => { selPal = i; buildPicker(); };
+    c.appendChild(s);
+  });
+}
+
+function toggleAdd() {
+  if (!canPlant()) return;
+  document.getElementById('add-sec').classList.toggle('open');
+}
+
+function plant() {
+  if (!canPlant()) { toast('Pas encore ! 🌱'); return; }
+  const name = document.getElementById('fname').value.trim() || 'ma fleur';
+  const f = { id: Date.now().toString(), name, palIdx: selPal, lastWatered: null, entries: [], createdAt: Date.now() };
+  S.flowers.push(f);
+  S.lastPlantedAt = Date.now();
+  S.selectedId = f.id;
+  document.getElementById('fname').value = '';
+  document.getElementById('add-sec').classList.remove('open');
+  save(); render();
+  toast(`« ${name} » est plantée ✦`);
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function showWkMsg() {
+  const m = document.getElementById('wkmsg');
+  m.style.display = 'block';
+  setTimeout(() => m.style.display = 'none', 5000);
+}
+
+
+// ─── ONBOARDING ────────────────────────────────────────────
+let obPal = 0;
+
+function buildObPalette() {
+  const c = document.getElementById('ob-palette');
+  c.innerHTML = '';
+  PAL.forEach((p, i) => {
+    const s = document.createElement('div');
+    s.className = 'ob-swatch' + (i === obPal ? ' on' : '');
+    s.style.background = `radial-gradient(circle at 38% 35%, ${p[1]}, ${p[0]})`;
+    s.onclick = () => { obPal = i; buildObPalette(); };
+    c.appendChild(s);
+  });
+}
+
+function obPlant() {
+  const name = document.getElementById('ob-name').value.trim() || 'ma première fleur';
+  const f = { id: Date.now().toString(), name, palIdx: obPal, lastWatered: null, entries: [], createdAt: Date.now() };
+  S.flowers.push(f);
+  S.lastPlantedAt = Date.now();
+  S.selectedId = f.id;
+  save();
+
+  const ob = document.getElementById('onboarding');
+  ob.classList.add('fade-out');
+  setTimeout(() => { ob.style.display = 'none'; render(); }, 750);
+  toast(`« ${name} » est plantée ✦`);
+}
+
+// ─── INIT ──────────────────────────────────────────────────
+load(); buildPicker(); buildObPalette();
+
+if (S.flowers.length === 0) {
+  // Show onboarding — don't create a default flower
+  document.getElementById('onboarding').style.display = 'flex';
+} else {
+  document.getElementById('onboarding').style.display = 'none';
+  if (!S.selectedId) S.selectedId = S.flowers[0].id;
+  render();
+}
+setInterval(render, 60000);
+</script>
+</body>
+</html>
