@@ -116,14 +116,20 @@ body::after {
   font-family: 'Nunito', sans-serif; font-weight: 600;
   font-size: 13px; color: var(--ink-soft);
   margin-bottom: 1px; opacity: 0.78;
+  text-shadow:
+    0 1px 3px rgba(255,255,255,0.9),
+    0 0px 8px rgba(255,255,255,0.7);
 }
 
 /* growth stage badge */
 .stage-badge {
   font-family: 'Nunito', sans-serif; font-weight: 500;
-  font-size: 10px; color: rgba(90,122,58,0.7);
+  font-size: 10px; color: rgba(90,122,58,0.85);
   letter-spacing: 0.04em;
   margin-bottom: 2px;
+  text-shadow:
+    0 1px 3px rgba(255,255,255,0.9),
+    0 0px 8px rgba(255,255,255,0.7);
 }
 
 /* WATER DROPS */
@@ -329,6 +335,72 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
 
 #panel::-webkit-scrollbar { width: 3px; }
 #panel::-webkit-scrollbar-thumb { background: rgba(139,101,69,0.25); border-radius: 2px; }
+/* JOURNAL NOTES BLOCK */
+#journal-block {
+  display: none;
+  margin: 14px 0 4px;
+  background: rgba(255,252,240,0.72);
+  border: 1px solid rgba(139,101,69,0.15);
+  border-radius: 12px;
+  padding: 12px 14px 10px;
+  box-shadow: 0 2px 12px rgba(42,31,14,0.06), inset 0 1px 0 rgba(255,255,255,0.7);
+}
+.journal-header {
+  font-family: 'Nunito', sans-serif;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(139,101,69,0.5);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.journal-entry {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: baseline;
+}
+.journal-entry:last-child { margin-bottom: 0; }
+.journal-date {
+  font-family: 'Nunito', sans-serif;
+  font-size: 10px; font-weight: 600;
+  color: rgba(139,101,69,0.45);
+  text-align: right;
+  white-space: nowrap;
+}
+.journal-text {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 500;
+  color: rgba(42,31,14,0.78);
+  line-height: 1.5;
+}
+.journal-text.today {
+  font-weight: 700;
+  color: rgba(42,31,14,0.92);
+}
+.journal-empty {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 500;
+  color: rgba(139,101,69,0.4);
+}
+
+/* CLOCK */
+#clock {
+  position: fixed; top: 22px; right: 32px;
+  z-index: 50;
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px; font-weight: 600;
+  color: var(--ink-soft);
+  background: rgba(245,240,232,0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.5);
+  padding: 6px 14px; border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(42,31,14,0.07);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
 /* Watering bounce animation */
 @keyframes wateredBounce {
   0%   { transform: scale(1) rotate(0deg); }
@@ -464,6 +536,62 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
 
 <div class="bg"></div>
 
+<!-- SKY ELEMENTS: dynamic sun + birds -->
+<svg id="sky-scene" style="position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="sun-blur"><feGaussianBlur stdDeviation="10"/></filter>
+    <filter id="sun-glow"><feGaussianBlur stdDeviation="4"/></filter>
+    <radialGradient id="sun-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#fff8d0"/>
+      <stop offset="40%"  stop-color="#fde87a"/>
+      <stop offset="100%" stop-color="#f9c840" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="moon-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#e8eef8"/>
+      <stop offset="60%" stop-color="#c8d8f0"/>
+      <stop offset="100%" stop-color="#a0b8d8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- sun/moon halo -->
+  <circle id="sky-halo" cx="78%" cy="14%" r="55" fill="url(#sun-grad)" filter="url(#sun-blur)" opacity="0.65"/>
+  <!-- sun/moon body -->
+  <circle id="sky-body" cx="78%" cy="14%" r="22" fill="#fde87a" opacity="0.9" filter="url(#sun-glow)"/>
+  <!-- sun inner -->
+  <circle id="sky-inner" cx="78%" cy="14%" r="15" fill="#fff5b0" opacity="0.7"/>
+
+  <!-- BIRDS -->
+  <g opacity="0.52" id="birds-1">
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="-120,0;1700,0" dur="38s" repeatCount="indefinite"/>
+      <path d="M0,42 C4,38 8,36 12,38" stroke="#4a3828" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+      <path d="M12,38 C16,36 20,38 24,42" stroke="#4a3828" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    </g>
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="-120,0;1700,0" dur="38s" begin="-5s" repeatCount="indefinite"/>
+      <path d="M18,28 C22,24 26,22 30,24" stroke="#4a3828" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <path d="M30,24 C34,22 38,24 42,28" stroke="#4a3828" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </g>
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="-120,0;1700,0" dur="38s" begin="-14s" repeatCount="indefinite"/>
+      <path d="M38,52 C42,48 46,47 50,49" stroke="#4a3828" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+      <path d="M50,49 C54,47 58,48 62,52" stroke="#4a3828" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+  <g opacity="0.35" id="birds-2">
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="-80,0;1700,0" dur="58s" begin="-22s" repeatCount="indefinite"/>
+      <path d="M0,18 C3,15 6,14 9,16" stroke="#4a3828" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <path d="M9,16 C12,14 15,15 18,18" stroke="#4a3828" stroke-width="1" fill="none" stroke-linecap="round"/>
+    </g>
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="-80,0;1700,0" dur="58s" begin="-38s" repeatCount="indefinite"/>
+      <path d="M14,8 C17,5 20,4 23,6" stroke="#4a3828" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+      <path d="M23,6 C26,4 29,5 32,8" stroke="#4a3828" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
+
 <!-- ONBOARDING -->
 <div id="onboarding">
   <div class="ob-wrap">
@@ -556,8 +684,10 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
     <div style="font-size:11px;color:var(--soil);opacity:0.65;margin-top:2px;">vitalité</div>
     <div class="htrack"><div class="hfill" id="sc-bar"></div></div>
     <div class="sc-st" id="sc-st"></div>
-    <div class="sc-last" id="sc-last"></div>
+
   </div>
+
+  <div id="journal-block"><div class="journal-header">📓 Notes</div><div id="journal-entries"></div></div>
 
   <div class="lbl">💧 Arroser</div>
   <textarea id="pride" placeholder="ce que j'ai vécu aujourd'hui…"></textarea>
@@ -584,6 +714,8 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
     </button>
   </div>
 </div>
+
+<div id="clock">--:--</div>
 
 <div id="wkmsg">🌿 Nouvelle semaine —<br>tu peux planter une fleur !</div>
 <div id="toast">…</div>
@@ -829,6 +961,8 @@ function render() {
 
   // Show/hide panel based on selection
   const panel = document.getElementById('panel');
+  const jb2 = document.getElementById('journal-block');
+  if (jb2 && !S.selectedId) jb2.style.display = 'none';
   // Update date
   const dateBadge = document.getElementById('date-badge');
   if (dateBadge) {
@@ -882,12 +1016,28 @@ function updateSel() {
   const healthS = h > 65 ? 'fresh' : h > 35 ? 'tired' : h > 5 ? 'wilted' : (h === 0 && gs > 0) ? 'dead' : 'ok';
   document.getElementById('sc-st').textContent = stMsgs[healthS] || '';
 
-  const last = document.getElementById('sc-last');
-  if (f.entries?.length) {
-    const e = f.entries[f.entries.length - 1];
-    last.textContent = `« ${e.text} »`;
-  } else {
-    last.textContent = 'aucune note encore — arrose-la !';
+  // Journal block
+  const jb = document.getElementById('journal-block');
+  const je = document.getElementById('journal-entries');
+  if (jb && je) {
+    if (f.entries?.length) {
+      jb.style.display = 'block';
+      const todayStr = new Date().toLocaleDateString('fr-FR');
+      // Show last 5 entries, most recent first
+      const recent = [...f.entries].reverse().slice(0, 5);
+      je.innerHTML = recent.map(e => {
+        const isToday = e.date === todayStr;
+        const parts = e.date.split('/');
+        const shortDate = parts.length === 3 ? parts[0]+'/'+parts[1] : e.date;
+        return `<div class="journal-entry">
+          <span class="journal-date">${shortDate}</span>
+          <span class="journal-text${isToday ? ' today' : ''}">${e.text}</span>
+        </div>`;
+      }).join('');
+    } else {
+      jb.style.display = 'block';
+      je.innerHTML = '<div class="journal-empty">aucune note encore…</div>';
+    }
   }
 }
 
@@ -1049,6 +1199,124 @@ function obPlant() {
   toast(`« ${name} » est plantée ✦`);
 }
 
+
+// ─── SKY & CLOCK ───────────────────────────────────────────
+function updateSky() {
+  const now = new Date();
+  const h = now.getHours() + now.getMinutes() / 60; // 0–24 float
+
+  // Clock display
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const clockEl = document.getElementById('clock');
+  if (clockEl) clockEl.textContent = hh + ':' + mm;
+
+  // Sun arc: rises at 6h (left), peaks at 12h (top center), sets at 20h (right)
+  // Map h → angle on a semicircle: 6h = 180° (left), 13h = 90° (top), 20h = 0° (right)
+  const W = window.innerWidth, H = window.innerHeight;
+  const isNight = h < 5.5 || h >= 21;
+  const isDawn  = h >= 5.5 && h < 7;
+  const isDusk  = h >= 19 && h < 21;
+  const isDay   = h >= 7 && h < 19;
+
+  // Normalise 6→20h to 0→1
+  const t = Math.max(0, Math.min(1, (h - 6) / 14));
+  // Semicircle: angle from π (left) to 0 (right)
+  const angle = Math.PI - t * Math.PI;
+  const rx = W * 0.42, ry = H * 0.68;
+  const cx0 = W * 0.5, cy0 = H * 0.92;
+  const sunX = cx0 + rx * Math.cos(angle);
+  const sunY = cy0 - ry * Math.sin(angle);
+
+  const halo  = document.getElementById('sky-halo');
+  const body  = document.getElementById('sky-body');
+  const inner = document.getElementById('sky-inner');
+
+  if (halo && body && inner) {
+    if (isNight) {
+      // Moon — fixed top right, silver
+      halo.setAttribute('cx', W * 0.82); halo.setAttribute('cy', H * 0.1);
+      body.setAttribute('cx', W * 0.82); body.setAttribute('cy', H * 0.1);
+      inner.setAttribute('cx', W * 0.82); inner.setAttribute('cy', H * 0.1);
+      halo.setAttribute('fill', 'url(#moon-grad)'); halo.setAttribute('r', 45);
+      body.setAttribute('fill', '#d8e8f8'); body.setAttribute('r', 18);
+      inner.setAttribute('fill', '#eef4fc'); inner.setAttribute('r', 13);
+      halo.setAttribute('opacity', 0.5); body.setAttribute('opacity', 0.85); inner.setAttribute('opacity', 0.6);
+    } else {
+      halo.setAttribute('cx', sunX); halo.setAttribute('cy', sunY);
+      body.setAttribute('cx', sunX); body.setAttribute('cy', sunY);
+      inner.setAttribute('cx', sunX); inner.setAttribute('cy', sunY);
+      halo.setAttribute('fill', 'url(#sun-grad)'); halo.setAttribute('r', 55);
+      body.setAttribute('r', 22); inner.setAttribute('r', 15);
+      halo.setAttribute('opacity', 0.65); body.setAttribute('opacity', 0.9); inner.setAttribute('opacity', 0.7);
+    }
+
+    // Sun color shifts by time of day
+    if (isDawn) {
+      body.setAttribute('fill', '#f4a060'); // warm orange dawn
+      inner.setAttribute('fill', '#ffd0a0');
+    } else if (isDusk) {
+      body.setAttribute('fill', '#e8804a'); // deep orange dusk
+      inner.setAttribute('fill', '#f8b080');
+    } else if (isDay) {
+      body.setAttribute('fill', '#fde87a'); // midday yellow
+      inner.setAttribute('fill', '#fff5b0');
+    }
+  }
+
+  // Sky background gradient by time
+  const bg = document.querySelector('.bg');
+  if (bg) {
+    let gradient;
+    if (isNight) {
+      gradient = `linear-gradient(180deg,
+        #0e1e3a 0%, #162540 20%, #1e2e4a 40%,
+        #2a3a4a 60%, #2e3a38 80%, #283028 100%)`;
+    } else if (isDawn) {
+      gradient = `linear-gradient(180deg,
+        #2a1a3a 0%, #c86848 12%, #f4a06a 25%,
+        #f8c8a0 42%, #f0e8d8 62%, #e8dbc8 100%)`;
+    } else if (isDusk) {
+      gradient = `linear-gradient(180deg,
+        #1a1028 0%, #e05030 12%, #e87050 25%,
+        #f0a070 42%, #f0e0c8 65%, #e8d0b8 100%)`;
+    } else {
+      gradient = `linear-gradient(180deg,
+        #c8e0f4 0%, #deeef8 20%, #f0ede0 48%,
+        #f5eedc 68%, #e8dbc8 100%)`;
+    }
+
+    const groundTint = isNight
+      ? 'radial-gradient(ellipse 70% 40% at 20% 95%, rgba(20,45,30,0.55) 0%, transparent 60%), radial-gradient(ellipse 55% 55% at 80% 92%, rgba(15,35,25,0.45) 0%, transparent 58%)'
+      : 'radial-gradient(ellipse 70% 40% at 20% 95%, rgba(90,122,58,0.14) 0%, transparent 60%), radial-gradient(ellipse 55% 55% at 80% 92%, rgba(90,122,58,0.11) 0%, transparent 58%)';
+
+    bg.style.background = [groundTint, gradient].join(',');
+  }
+
+  // Subtly darken ground SVG at night — still visible
+  const groundSvg = document.querySelector('.ground-svg');
+  if (groundSvg) {
+    groundSvg.style.filter = isNight ? 'brightness(0.55) saturate(0.6)' : 'none';
+  }
+
+  // Adapt flower labels for night legibility
+  const style = document.getElementById('night-label-style') || (() => {
+    const s = document.createElement('style');
+    s.id = 'night-label-style';
+    document.head.appendChild(s);
+    return s;
+  })();
+  if (isNight) {
+    style.textContent = `.flower-label { color: #d8e8f0 !important; opacity: 0.92 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.6) !important; } .stage-badge { color: rgba(160,210,180,0.9) !important; text-shadow: 0 1px 4px rgba(0,0,0,0.8) !important; }`;
+  } else {
+    style.textContent = '';
+  }
+  const b1 = document.getElementById('birds-1');
+  const b2 = document.getElementById('birds-2');
+  if (b1) b1.setAttribute('opacity', isNight ? 0 : 0.52);
+  if (b2) b2.setAttribute('opacity', isNight ? 0 : 0.35);
+}
+
 // ─── INIT ──────────────────────────────────────────────────
 load(); buildPicker(); buildObPalette();
 
@@ -1069,6 +1337,8 @@ if (S.flowers.length === 0) {
   render();
 }
 setInterval(render, 60000);
+updateSky();
+setInterval(updateSky, 30000);
 </script>
 </body>
 </html>
