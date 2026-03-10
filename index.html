@@ -329,8 +329,43 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
 
 #panel::-webkit-scrollbar { width: 3px; }
 #panel::-webkit-scrollbar-thumb { background: rgba(139,101,69,0.25); border-radius: 2px; }
+/* Watering bounce animation */
+@keyframes wateredBounce {
+  0%   { transform: scale(1) rotate(0deg); }
+  20%  { transform: scale(1.12) rotate(-3deg); }
+  40%  { transform: scale(0.96) rotate(2deg); }
+  60%  { transform: scale(1.06) rotate(-2deg); }
+  80%  { transform: scale(0.98) rotate(1deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+.watered-bounce {
+  animation: wateredBounce 0.7s cubic-bezier(0.34, 1.5, 0.64, 1) forwards;
+  transform-origin: center bottom;
+}
+
 
 /* FAB — floating plant button */
+#fab-row {
+  display: flex; align-items: center; gap: 10px;
+  justify-content: flex-end;
+}
+#fab-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 600;
+  color: var(--ink-soft);
+  background: rgba(245,240,232,0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.5);
+  padding: 6px 12px; border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(42,31,14,0.08);
+  white-space: nowrap;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+#fab-btn:hover ~ #fab-label,
+#fab-row:hover #fab-label { opacity: 1; }
+
 #fab-wrap {
   position: fixed; bottom: 32px; right: 32px;
   z-index: 100;
@@ -454,7 +489,7 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
     </svg>
 
     <div class="ob-title">Bienvenue dans<br>ton jardin ✦</div>
-    <div class="ob-sub">Chaque fleur représente quelque chose<br>dont tu prends soin. Plante la première<br>et arrose-la chaque jour avec une fierté.</div>
+    <div class="ob-sub">Chaque fleur représente quelque chose<br>dont tu prends soin. Plante la première<br>et arrose-la chaque jour.</div>
 
     <div class="ob-form">
       <input class="ob-input" id="ob-name" placeholder="Nom de ta première fleur…" maxlength="22">
@@ -512,10 +547,8 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
 <!-- PANEL -->
 <div id="panel">
   <h1>Mon Jardin</h1>
-  <div class="sub">des petites fiertés du quotidien</div>
-  <div class="wk" id="wk-badge">⌘ semaine —</div>
-
-  <!-- Selected flower card -->
+  <div class="sub">un jardin qui grandit avec toi</div>
+  <div class="wk" id="date-badge"></div>
   <div id="sel-card" style="display:none;">
     <div class="sc-name" id="sc-name"></div>
     <div class="sc-stage" id="sc-stage"></div>
@@ -527,7 +560,7 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
   </div>
 
   <div class="lbl">💧 Arroser</div>
-  <textarea id="pride" placeholder="ce dont je suis fier·e aujourd'hui…"></textarea>
+  <textarea id="pride" placeholder="ce que j'ai vécu aujourd'hui…"></textarea>
   <button class="btn bw" id="btn-water" onclick="water()">Arroser la fleur choisie</button>
 
   <div class="div"></div>
@@ -544,9 +577,12 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
     <button class="btn bg2" onclick="plant()">Planter ↓</button>
     <div id="lock-info-fab" class="lock-info-fab"></div>
   </div>
-  <button id="fab-btn" onclick="toggleAdd()">
-    <span id="fab-icon">🌱</span>
-  </button>
+  <div id="fab-row">
+    <span id="fab-label">Planter une nouvelle fleur</span>
+    <button id="fab-btn" onclick="toggleAdd()">
+      <span id="fab-icon">🌱</span>
+    </button>
+  </div>
 </div>
 
 <div id="wkmsg">🌿 Nouvelle semaine —<br>tu peux planter une fleur !</div>
@@ -591,86 +627,131 @@ function wateredToday(f) {
 }
 
 // ─── FLOWER SVG ────────────────────────────────────────────
-function flowerSVG(pal, health, growthStage) {
+function flowerSVG(pal, health, growthStage, isWatered) {
   const [p1, p2, ctr] = pal;
-  const h = health;
 
-  // Visual health state (separate from growth)
-  const healthState = h > 65 ? 'fresh' : h > 35 ? 'tired' : h > 5 ? 'wilted' : (h === 0 && growthStage > 0) ? 'dead' : 'ok';
-  const dead = healthState === 'dead';
-  const wilted = healthState === 'wilted';
-  const tired = healthState === 'tired';
+  const healthState = health > 65 ? 'fresh' : health > 35 ? 'tired' : health > 5 ? 'wilted' : (health === 0 && growthStage > 0) ? 'dead' : 'ok';
+  const dead    = healthState === 'dead';
+  const wilted  = healthState === 'wilted';
+  const tired   = healthState === 'tired';
 
-  const droop = dead ? 38 : wilted ? 20 : tired ? 6 : 0;
-  const stemCol = (dead || wilted) ? '#8a7838' : '#5a7a3a';
-  const p1c = dead ? '#b0a080' : wilted ? '#c0a860' : p1;
-  const p2c = dead ? '#c8b898' : wilted ? '#d0bc78' : p2;
-  const ctrc = (dead || wilted) ? '#c8a040' : ctr;
-  const op = dead ? 0.4 : 1;
+  const stemCol  = (dead||wilted) ? '#8a7838' : '#5a7a3a';
+  const leafCol  = (dead||wilted) ? '#9a8840' : '#6a9a42';
+  const leafCol2 = (dead||wilted) ? '#b0a050' : '#88b858';
+  const p1c  = dead ? '#b0a080' : wilted ? '#c8a860' : p1;
+  const p2c  = dead ? '#c8b898' : wilted ? '#d8bc78' : p2;
+  const ctrc = (dead||wilted) ? '#c8a040' : ctr;
+  const op   = dead ? 0.42 : 1;
+  const droop = dead ? 35 : wilted ? 18 : tired ? 5 : 0;
 
-  const bx = 40, by = 28;
-  const fid = 'f' + pal[0].replace('#','') + growthStage;
+  const fid = 'fw' + pal[0].replace('#','') + growthStage;
+  const animClass = isWatered ? 'class="watered-bounce"' : '';
 
-  // Scale petals by growth stage (only shows petals at stage >= 2)
-  const petalScale = growthStage === 4 ? 1 : growthStage === 3 ? 0.78 : growthStage === 2 ? 0.48 : 0;
-  const petalScale2 = dead ? petalScale * 0.38 : wilted ? petalScale * 0.62 : petalScale;
+  // ── STAGE 0: Seed in soil ───────────────────────────────────
+  if (growthStage === 0) {
+    return `<svg width="60" height="40" viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
+      <defs><filter id="${fid}"><feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/></filter></defs>
+      <!-- soil mound -->
+      <ellipse cx="30" cy="34" rx="22" ry="7" fill="#9b7555" opacity="0.28" filter="url(#${fid})"/>
+      <!-- seed body — bean shape -->
+      <path d="M30 28 C24 27 22 22 26 19 C29 17 33 18 34 22 C35 26 33 29 30 28Z"
+        fill="#7a5535" opacity="0.82" filter="url(#${fid})"/>
+      <path d="M28 22 C28 19 31 18 32 20" stroke="#a07848" stroke-width="0.8" fill="none" opacity="0.5"/>
+      <!-- tiny sprout tip just emerging -->
+      <path d="M30 18 Q31 13 30 9" stroke="${stemCol}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.7"/>
+      <path d="M30 13 Q34 10 36 6" stroke="${leafCol}" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.6"/>
+    </svg>`;
+  }
 
-  const angles = [0,40,80,120,160,200,240,320];
-  const petals = petalScale2 > 0 ? angles.map((a,i) =>
-    `<g transform="translate(${bx},${by}) rotate(${a}) scale(${petalScale2})">
-      <path d="M0,0 C-6,-5 -8,-18 0,-22 C8,-18 6,-5 0,0Z"
-        fill="${i%2===0?p1c:p2c}" opacity="${0.78+(i%3)*0.07}" stroke="${p1c}" stroke-width="0.3"/>
-    </g>`
-  ).join('') : '';
+  // ── STAGE 1: Young sprout ───────────────────────────────────
+  if (growthStage === 1) {
+    const dx = droop * 0.4;
+    return `<svg width="70" height="70" viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;opacity:${op}" ${animClass}>
+      <defs><filter id="${fid}"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="5"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/></filter></defs>
+      <!-- stem — gentle S-curve -->
+      <path d="M35 68 Q${36+dx} 52 ${33+dx} 36 Q${31+dx} 22 ${32+dx} 14"
+        stroke="${stemCol}" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="0.85"/>
+      <!-- left leaf — broad teardrop -->
+      <path d="M${33+dx} 38 C${20+dx} 35 ${14+dx} 26 ${22+dx} 20 C${28+dx} 16 ${34+dx} 24 ${33+dx} 38Z"
+        fill="${leafCol}" opacity="0.72" filter="url(#${fid})"/>
+      <path d="M${33+dx} 38 Q${24+dx} 30 ${22+dx} 20" stroke="${leafCol2}" stroke-width="0.7" fill="none" opacity="0.5"/>
+      <!-- right leaf -->
+      <path d="M${33+dx} 30 C${46+dx} 26 ${52+dx} 18 ${44+dx} 13 C${38+dx} 9 ${33+dx} 18 ${33+dx} 30Z"
+        fill="${leafCol2}" opacity="0.65" filter="url(#${fid})"/>
+      <path d="M${33+dx} 30 Q${44+dx} 22 ${44+dx} 13" stroke="${leafCol}" stroke-width="0.7" fill="none" opacity="0.45"/>
+    </svg>`;
+  }
 
-  const center = petalScale2 > 0 ? `
-    <circle cx="${bx}" cy="${by}" r="${5.5*petalScale2}" fill="${ctrc}" opacity="0.88"/>
-    <circle cx="${bx-1.5}" cy="${by-1.5}" r="${2.2*petalScale2}" fill="rgba(255,255,255,0.38)"/>
-  ` : '';
+  // ── STAGE 2: Budding ────────────────────────────────────────
+  if (growthStage === 2) {
+    const dx = droop * 0.5;
+    return `<svg width="72" height="82" viewBox="0 0 72 82" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;opacity:${op}" ${animClass}>
+      <defs><filter id="${fid}"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="6"/>
+      <feDisplacementMap in="SourceGraphic" scale="2.2"/></filter></defs>
+      <!-- stem with natural lean -->
+      <path d="M36 80 Q${37+dx} 62 ${34+dx} 44 Q${32+dx} 28 ${35+dx} 18"
+        stroke="${stemCol}" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.85"/>
+      <!-- lower leaf left -->
+      <path d="M${35+dx} 52 C${20+dx} 48 ${14+dx} 38 ${24+dx} 32 C${30+dx} 28 ${36+dx} 36 ${35+dx} 52Z"
+        fill="${leafCol}" opacity="0.7" filter="url(#${fid})"/>
+      <path d="M${35+dx} 52 Q${22+dx} 42 ${24+dx} 32" stroke="${leafCol2}" stroke-width="0.8" fill="none" opacity="0.45"/>
+      <!-- upper leaf right -->
+      <path d="M${35+dx} 36 C${50+dx} 32 ${56+dx} 22 ${46+dx} 16 C${40+dx} 12 ${35+dx} 22 ${35+dx} 36Z"
+        fill="${leafCol2}" opacity="0.65" filter="url(#${fid})"/>
+      <!-- bud — rounded teardrop, slightly open at tip -->
+      <path d="M${35+dx} 18 C${28+dx} 18 ${25+dx} 11 ${28+dx} 5 C${30+dx} 0 ${40+dx} 0 ${42+dx} 5 C${45+dx} 11 ${42+dx} 18 ${35+dx} 18Z"
+        fill="${p1c}" opacity="0.82" filter="url(#${fid})"/>
+      <path d="M${35+dx} 18 C${31+dx} 14 ${29+dx} 8 ${32+dx} 3" stroke="${p2c}" stroke-width="1" fill="none" opacity="0.5"/>
+      <!-- sepal lines -->
+      <path d="M${33+dx} 17 Q${31+dx} 13 ${32+dx} 8" stroke="${leafCol}" stroke-width="1.2" fill="none" opacity="0.5"/>
+      <path d="M${37+dx} 17 Q${39+dx} 13 ${38+dx} 8" stroke="${leafCol}" stroke-width="1.2" fill="none" opacity="0.4"/>
+    </svg>`;
+  }
 
-  // Leaf — visible from stage 1+
-  const leafOp = growthStage >= 1 ? 0.55 : 0;
-  const leaf = `
-    <path d="M${40+droop*0.4} ${56+droop*0.3} Q${24+droop*0.2} 47 20 40"
-      stroke="${stemCol}" stroke-width="1.1" fill="none" opacity="${leafOp}"/>
-    <ellipse cx="${28+droop*0.2}" cy="47" rx="8" ry="5"
-      fill="${stemCol}" opacity="${leafOp * 0.65}"
-      transform="rotate(-38 ${28+droop*0.2} 47)"/>
-  `;
+  // ── STAGE 3 & 4: Blooming flower ───────────────────────────
+  const dx = droop * 0.6;
+  const stemHeight = growthStage === 3 ? 20 : 14;
+  const petalR  = growthStage === 3 ? 11 : 14;
+  const petalL  = growthStage === 3 ? 17 : 22;
+  const cx = 36 + dx, cy = stemHeight;
+  const svgH = growthStage === 3 ? 88 : 92;
 
-  // Stem height by stage
-  const stemTop = growthStage === 0 ? 78 : growthStage === 1 ? 64 : growthStage === 2 ? 48 : growthStage === 3 ? 36 : by + 4;
+  // 6 organic petals using unique paths for natural look
+  const petalAngles = [0, 60, 120, 180, 240, 300];
+  const petals = petalAngles.map((a, i) => {
+    const rad = a * Math.PI / 180;
+    const tipX = cx + Math.cos(rad) * petalL;
+    const tipY = cy + Math.sin(rad) * petalL;
+    const c1x  = cx + Math.cos(rad - 0.6) * petalR;
+    const c1y  = cy + Math.sin(rad - 0.6) * petalR;
+    const c2x  = cx + Math.cos(rad + 0.6) * petalR;
+    const c2y  = cy + Math.sin(rad + 0.6) * petalR;
+    const col  = i % 2 === 0 ? p1c : p2c;
+    const op2  = 0.75 + (i % 3) * 0.07;
+    return `<path d="M${cx} ${cy} C${c1x} ${c1y} ${tipX} ${tipY} ${tipX} ${tipY} C${tipX} ${tipY} ${c2x} ${c2y} ${cx} ${cy}Z"
+      fill="${col}" opacity="${op2}" filter="url(#${fid})"/>
+    <path d="M${cx} ${cy} L${tipX} ${tipY}" stroke="rgba(255,255,255,0.2)" stroke-width="0.6" fill="none"/>`;
+  }).join('');
 
-  // Seed visual
-  const seedEl = growthStage === 0 ? `
-    <circle cx="40" cy="80" r="5" fill="#8b6545" opacity="0.68"/>
-    <path d="M40 74 Q42 66 40 58" stroke="${stemCol}" stroke-width="1.4" fill="none" opacity="0.6"/>
-  ` : '';
-
-  // Bud (stage 2)
-  const budEl = growthStage === 2 ? `
-    <ellipse cx="${bx}" cy="${by+4}" rx="6" ry="8"
-      fill="${p1c}" opacity="0.75"/>
-    <ellipse cx="${bx}" cy="${by}" rx="4" ry="4"
-      fill="${p2c}" opacity="0.5"/>
-  ` : '';
-
-  return `<svg width="80" height="95" viewBox="0 0 80 95" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;opacity:${op}">
-    <defs>
-      <filter id="${fid}">
-        <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="7"/>
-        <feDisplacementMap in="SourceGraphic" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
-      </filter>
-    </defs>
-    ${growthStage >= 1 ? leaf : ''}
-    ${growthStage >= 1 ? `<path d="M40 92 Q${40+droop*0.6} ${(92+stemTop)/2} ${40+droop} ${stemTop}"
-      stroke="${stemCol}" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.82"/>` : ''}
-    <g filter="url(#${fid})">
-      ${seedEl}
-      ${budEl}
-      ${petals}
-      ${center}
-    </g>
+  return `<svg width="80" height="${svgH}" viewBox="0 0 80 ${svgH}" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;opacity:${op}" ${animClass}>
+    <defs><filter id="${fid}"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="7"/>
+    <feDisplacementMap in="SourceGraphic" scale="2.2"/></filter></defs>
+    <!-- stem -->
+    <path d="M36 ${svgH} Q${37+dx} ${svgH*0.7} ${35+dx} ${svgH*0.5} Q${34+dx} ${svgH*0.3} ${cx} ${cy+petalL+2}"
+      stroke="${stemCol}" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.85"/>
+    <!-- left leaf -->
+    <path d="M${36+dx*0.3} ${svgH*0.62} C${20+dx} ${svgH*0.56} ${14+dx} ${svgH*0.44} ${24+dx} ${svgH*0.37} C${30+dx} ${svgH*0.32} ${36+dx*0.3} ${svgH*0.44} ${36+dx*0.3} ${svgH*0.62}Z"
+      fill="${leafCol}" opacity="0.65" filter="url(#${fid})"/>
+    <!-- right leaf -->
+    <path d="M${36+dx*0.3} ${svgH*0.48} C${52+dx} ${svgH*0.44} ${58+dx} ${svgH*0.32} ${48+dx} ${svgH*0.26} C${42+dx} ${svgH*0.22} ${36+dx*0.3} ${svgH*0.32} ${36+dx*0.3} ${svgH*0.48}Z"
+      fill="${leafCol2}" opacity="0.6" filter="url(#${fid})"/>
+    <!-- petals -->
+    <g>${petals}</g>
+    <!-- center disc -->
+    <circle cx="${cx}" cy="${cy}" r="${petalR * 0.42}" fill="${ctrc}" opacity="0.92"/>
+    <circle cx="${cx - 1}" cy="${cy - 1}" r="${petalR * 0.18}" fill="rgba(255,255,255,0.45)"/>
   </svg>`;
 }
 
@@ -734,7 +815,7 @@ function render() {
     lbl.textContent = f.name;
 
     const wrap = document.createElement('div');
-    wrap.innerHTML = flowerSVG(pal, h, gs);
+    wrap.innerHTML = flowerSVG(pal, h, gs, false);
 
     spot.appendChild(badge);
     spot.appendChild(lbl);
@@ -744,10 +825,15 @@ function render() {
 
   updateSel();
   updatePlantButton();
-  document.getElementById('wk-badge').textContent = `⌘ semaine ${(S.weekNum % 52) + 1}`;
+
 
   // Show/hide panel based on selection
   const panel = document.getElementById('panel');
+  // Update date
+  const dateBadge = document.getElementById('date-badge');
+  if (dateBadge) {
+    dateBadge.textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  }
   if (S.selectedId) {
     panel.classList.remove('hidden');
   } else {
@@ -801,7 +887,7 @@ function updateSel() {
     const e = f.entries[f.entries.length - 1];
     last.textContent = `« ${e.text} »`;
   } else {
-    last.textContent = 'aucune fierté encore — arrose-la !';
+    last.textContent = 'aucune note encore — arrose-la !';
   }
 }
 
@@ -833,7 +919,7 @@ function water() {
   if (!f) return;
   if (wateredToday(f)) { toast('Déjà arrosée aujourd\'hui 💧'); return; }
   const txt = document.getElementById('pride').value.trim();
-  if (!txt) { toast('Écris quelque chose dont tu es fier·e ✦'); return; }
+  if (!txt) { toast('Écris quelque chose avant d\'arroser ✦'); return; }
 
   f.lastWatered = Date.now();
   if (!f.entries) f.entries = [];
@@ -857,6 +943,16 @@ function water() {
   const didGrow = newGs > gs;
 
   save(); render();
+  // Trigger bounce animation on the watered flower
+  setTimeout(() => {
+    const wspot = document.querySelector(`[data-id="${f.id}"] svg`);
+    if (wspot) {
+      wspot.classList.remove('watered-bounce');
+      void wspot.offsetWidth; // reflow
+      wspot.classList.add('watered-bounce');
+      setTimeout(() => wspot.classList.remove('watered-bounce'), 800);
+    }
+  }, 50);
   toast(didGrow ? `🌱 Elle grandit — ${STAGE_LABELS[newGs]} !` : 'Arrosée avec soin 💧');
 }
 
