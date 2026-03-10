@@ -66,22 +66,21 @@ body::after {
 /* GARDEN */
 #garden {
   position: fixed;
-  bottom: 10vh; left: 0; right: 0;
+  bottom: 0; left: 0; right: 0; top: 0;
   z-index: 10;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  padding: 0 20px 0 370px;
-  gap: 28px 16px;
+  pointer-events: none;
 }
 
 .flower-spot {
   display: flex; flex-direction: column; align-items: center;
   cursor: pointer;
   transition: transform 0.3s ease, filter 0.2s ease;
-  position: relative;
+  position: absolute;
+  bottom: 14vh;
   padding: 8px 10px 4px;
   border-radius: 16px;
+  pointer-events: all;
+  transform-origin: bottom center;
 }
 .flower-spot:hover { transform: translateY(-5px) rotate(-1.5deg); }
 .flower-spot:active { transform: translateY(-2px) scale(0.93); transition: transform 0.08s ease; }
@@ -149,6 +148,10 @@ body::after {
   padding: 30px 26px 26px;
   overflow-y: auto;
   box-shadow: 3px 0 20px rgba(42,31,14,0.07);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#panel.hidden {
+  transform: translateX(-100%);
 }
 #panel::before {
   content: '';
@@ -327,6 +330,69 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
 #panel::-webkit-scrollbar { width: 3px; }
 #panel::-webkit-scrollbar-thumb { background: rgba(139,101,69,0.25); border-radius: 2px; }
 
+/* FAB — floating plant button */
+#fab-wrap {
+  position: fixed; bottom: 32px; right: 32px;
+  z-index: 100;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+}
+
+#fab-btn {
+  width: 56px; height: 56px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: rgba(255,255,255,0.25);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  box-shadow:
+    0 4px 24px rgba(90,122,58,0.22),
+    0 0 0 1px rgba(255,255,255,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+  font-size: 22px;
+  transition: all 0.25s cubic-bezier(0.34,1.5,0.64,1);
+  display: flex; align-items: center; justify-content: center;
+}
+#fab-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 32px rgba(90,122,58,0.3), 0 0 0 1px rgba(255,255,255,0.55), inset 0 1px 0 rgba(255,255,255,0.7);
+}
+#fab-btn:active { transform: scale(0.94); }
+#fab-btn.open { transform: rotate(45deg) scale(1.05); }
+
+#fab-panel {
+  background: rgba(245,240,232,0.75);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  border: 1px solid rgba(255,255,255,0.55);
+  box-shadow: 0 8px 40px rgba(42,31,14,0.12), 0 0 0 1px rgba(139,101,69,0.1);
+  border-radius: 16px;
+  padding: 18px 18px 14px;
+  width: 260px;
+  display: none;
+  flex-direction: column; gap: 10px;
+  transform-origin: bottom right;
+  animation: fabPanelIn 0.3s cubic-bezier(0.34,1.4,0.64,1);
+}
+#fab-panel.open { display: flex; }
+
+@keyframes fabPanelIn {
+  from { opacity: 0; transform: scale(0.88) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.fab-panel-title {
+  font-family: 'Nunito', sans-serif; font-weight: 700;
+  font-size: 14px; color: var(--moss);
+  margin-bottom: 2px;
+}
+
+.lock-info-fab {
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px; color: rgba(74,56,40,0.55);
+  line-height: 1.45; display: none;
+}
+.lock-info-fab.show { display: block; }
+
+
 /* ONBOARDING */
 #onboarding {
   position: fixed; inset: 0; z-index: 500;
@@ -465,17 +531,22 @@ textarea::placeholder { color: rgba(74,56,40,0.38); }
   <button class="btn bw" id="btn-water" onclick="water()">Arroser la fleur choisie</button>
 
   <div class="div"></div>
-
-  <div class="lbl">🌱 Planter</div>
-  <button class="btn bg2" id="btn-plant-toggle" onclick="toggleAdd()">Nouvelle fleur cette semaine</button>
   <div id="lock-info"></div>
+</div>
 
-  <div id="add-sec">
-    <div style="height:10px;"></div>
+
+<!-- FLOATING PLANT BUTTON -->
+<div id="fab-wrap">
+  <div id="fab-panel">
+    <div class="fab-panel-title">🌱 Nouvelle fleur</div>
     <input class="ni" id="fname" placeholder="Nom de la fleur…" maxlength="22">
     <div class="cpick" id="cpick"></div>
     <button class="btn bg2" onclick="plant()">Planter ↓</button>
+    <div id="lock-info-fab" class="lock-info-fab"></div>
   </div>
+  <button id="fab-btn" onclick="toggleAdd()">
+    <span id="fab-icon">🌱</span>
+  </button>
 </div>
 
 <div id="wkmsg">🌿 Nouvelle semaine —<br>tu peux planter une fleur !</div>
@@ -651,7 +722,8 @@ function render() {
     const spot = document.createElement('div');
     spot.className = 'flower-spot' + (S.selectedId === f.id ? ' sel' : '');
     spot.dataset.id = f.id;
-    spot.onclick = () => { S.selectedId = f.id; render(); };
+    spot.style.left = (f.x || 50) + '%';
+    spot.onclick = () => { S.selectedId = S.selectedId === f.id ? null : f.id; render(); };
 
     const badge = document.createElement('div');
     badge.className = 'stage-badge';
@@ -673,6 +745,14 @@ function render() {
   updateSel();
   updatePlantButton();
   document.getElementById('wk-badge').textContent = `⌘ semaine ${(S.weekNum % 52) + 1}`;
+
+  // Show/hide panel based on selection
+  const panel = document.getElementById('panel');
+  if (S.selectedId) {
+    panel.classList.remove('hidden');
+  } else {
+    panel.classList.add('hidden');
+  }
 }
 
 function updateSel() {
@@ -726,23 +806,23 @@ function updateSel() {
 }
 
 function updatePlantButton() {
-  const btn = document.getElementById('btn-plant-toggle');
-  const lockInfo = document.getElementById('lock-info');
   const days = daysUntilNextPlant();
+  const lockFab = document.getElementById('lock-info-fab');
+  const cpick = document.getElementById('cpick');
+  const fname = document.getElementById('fname');
+  const plantBtn = document.querySelector('#fab-panel .btn.bg2');
 
   if (days > 0) {
-    btn.classList.add('btn-locked');
-    btn.onclick = () => {
-      lockInfo.classList.add('show');
-      lockInfo.textContent = `🔒 Tu pourras planter une nouvelle fleur dans ${days} jour${days > 1 ? 's' : ''}. Prends soin de celles qui sont déjà là…`;
-    };
-    lockInfo.textContent = `🔒 Prochaine fleur dans ${days} jour${days > 1 ? 's' : ''}`;
-    lockInfo.classList.add('show');
-    document.getElementById('add-sec').classList.remove('open');
+    lockFab.textContent = `🔒 Prochaine fleur dans ${days} jour${days > 1 ? 's' : ''}`;
+    lockFab.classList.add('show');
+    if (cpick) cpick.style.opacity = '0.4';
+    if (fname) fname.disabled = true;
+    if (plantBtn) { plantBtn.classList.add('btn-locked'); plantBtn.onclick = null; }
   } else {
-    btn.classList.remove('btn-locked');
-    btn.onclick = toggleAdd;
-    lockInfo.classList.remove('show');
+    lockFab.classList.remove('show');
+    if (cpick) cpick.style.opacity = '1';
+    if (fname) fname.disabled = false;
+    if (plantBtn) { plantBtn.classList.remove('btn-locked'); plantBtn.onclick = plant; }
   }
 }
 
@@ -793,19 +873,40 @@ function buildPicker() {
 }
 
 function toggleAdd() {
-  if (!canPlant()) return;
-  document.getElementById('add-sec').classList.toggle('open');
+  const panel = document.getElementById('fab-panel');
+  const btn = document.getElementById('fab-btn');
+  const icon = document.getElementById('fab-icon');
+  const isOpen = panel.classList.contains('open');
+
+  if (!canPlant()) {
+    // still open to show lock message
+    panel.classList.toggle('open');
+    btn.classList.toggle('open');
+    icon.textContent = panel.classList.contains('open') ? '✕' : '🌱';
+    return;
+  }
+  panel.classList.toggle('open');
+  btn.classList.toggle('open');
+  icon.textContent = panel.classList.contains('open') ? '✕' : '🌱';
 }
 
 function plant() {
   if (!canPlant()) { toast('Pas encore ! 🌱'); return; }
   const name = document.getElementById('fname').value.trim() || 'ma fleur';
-  const f = { id: Date.now().toString(), name, palIdx: selPal, lastWatered: null, entries: [], createdAt: Date.now() };
+  // Pick a random x% position, spread evenly avoiding left panel area (28%) and right edge (90%)
+  const occupied = S.flowers.map(fl => fl.x || 50);
+  let x, attempts = 0;
+  do {
+    x = 30 + Math.random() * 58; // 30%–88%
+    attempts++;
+  } while (attempts < 30 && occupied.some(ox => Math.abs(ox - x) < 7));
+  const f = { id: Date.now().toString(), name, palIdx: selPal, x, lastWatered: null, entries: [], createdAt: Date.now() };
   S.flowers.push(f);
   S.lastPlantedAt = Date.now();
   S.selectedId = f.id;
   document.getElementById('fname').value = '';
-  document.getElementById('add-sec').classList.remove('open');
+  const fp=document.getElementById('fab-panel'),fb=document.getElementById('fab-btn'),fi=document.getElementById('fab-icon');
+  fp.classList.remove('open'); fb.classList.remove('open'); fi.textContent='🌱';
   save(); render();
   toast(`« ${name} » est plantée ✦`);
 }
@@ -839,7 +940,8 @@ function buildObPalette() {
 
 function obPlant() {
   const name = document.getElementById('ob-name').value.trim() || 'ma première fleur';
-  const f = { id: Date.now().toString(), name, palIdx: obPal, lastWatered: null, entries: [], createdAt: Date.now() };
+  const x = 30 + Math.random() * 40; // center-ish on first plant
+  const f = { id: Date.now().toString(), name, palIdx: obPal, x, lastWatered: null, entries: [], createdAt: Date.now() };
   S.flowers.push(f);
   S.lastPlantedAt = Date.now();
   S.selectedId = f.id;
@@ -853,6 +955,14 @@ function obPlant() {
 
 // ─── INIT ──────────────────────────────────────────────────
 load(); buildPicker(); buildObPalette();
+
+// Assign x positions to legacy flowers that don't have one
+S.flowers.forEach((f, i) => {
+  if (f.x === undefined) {
+    f.x = 30 + (i * 13) % 58;
+  }
+});
+save();
 
 if (S.flowers.length === 0) {
   // Show onboarding — don't create a default flower
